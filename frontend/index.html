@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>家常膳食小助手</title>
+    <link rel="stylesheet" href="./styles.css?v=20260703-4" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">明日安排</p>
+          <h1 id="tomorrowTitle">家常膳食小助手</h1>
+        </div>
+        <button id="regenerateBtn" class="icon-text-button" type="button">换一套</button>
+      </header>
+
+      <main>
+        <section id="tab-plan" class="screen is-active" aria-label="明日菜单">
+          <section class="hero-panel">
+            <div>
+              <p class="hero-kicker">午餐 / 晚餐</p>
+              <h2>选人数，菜单就绪。</h2>
+            </div>
+            <div class="hero-stat">
+              <strong id="recipeCount">0</strong>
+              <span>道启动菜</span>
+            </div>
+          </section>
+
+          <section class="full-band">
+            <div class="section-title">
+              <h3>用餐人数</h3>
+              <div class="section-actions">
+                <button id="settingsBtn" class="quiet-button" type="button">家庭设置</button>
+                <button id="copyLunchBtn" class="quiet-button" type="button">晚餐同午餐</button>
+              </div>
+            </div>
+            <div id="mealPicker" class="meal-picker"></div>
+            <div class="member-tools">
+              <button id="addGuestBtn" class="tool-button" type="button">加 1 位客人</button>
+              <button id="clearGuestsBtn" class="tool-button" type="button">清客人</button>
+            </div>
+            <button id="generateBtn" class="primary-button" type="button">生成明日菜单</button>
+          </section>
+
+          <section id="planOutput" class="plan-output"></section>
+          <section id="historyOutput" class="history-output"></section>
+        </section>
+
+        <section id="tab-shopping" class="screen" aria-label="采购清单">
+          <section class="toolbar-line">
+            <div>
+              <p class="eyebrow">采购清单</p>
+              <h2 id="shoppingTitle">还没有生成菜单</h2>
+            </div>
+            <div class="toolbar-actions">
+              <button id="pantryBtn" class="icon-text-button" type="button">库存</button>
+              <button id="reimburseBtn" class="icon-text-button" type="button">报销</button>
+              <button id="copyShoppingBtn" class="icon-text-button" type="button">复制</button>
+            </div>
+          </section>
+          <div id="shoppingOutput" class="shopping-output"></div>
+        </section>
+
+        <section id="tab-recipes" class="screen" aria-label="菜谱库">
+          <section class="toolbar-line">
+            <div>
+              <p class="eyebrow">菜谱库</p>
+              <h2>导入结果复核</h2>
+            </div>
+            <button id="reviewOnlyBtn" class="icon-text-button" type="button" aria-pressed="false">待复核</button>
+          </section>
+          <div class="search-row">
+            <input id="recipeSearch" type="search" placeholder="搜菜名、食材、做法" />
+          </div>
+          <div id="recipeFilters" class="filter-row"></div>
+          <div id="recipeList" class="recipe-list"></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="主导航">
+        <button class="nav-button is-active" type="button" data-tab="plan">菜单</button>
+        <button class="nav-button" type="button" data-tab="shopping">采购</button>
+        <button class="nav-button" type="button" data-tab="recipes">菜谱</button>
+      </nav>
+
+      <div id="recipeDrawer" class="drawer" aria-hidden="true">
+        <div class="drawer-scrim" data-close-drawer></div>
+        <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+          <button class="close-button" type="button" data-close-drawer>关闭</button>
+          <div id="drawerBody"></div>
+        </section>
+      </div>
+
+      <div id="replaceSheet" class="drawer" aria-hidden="true">
+        <div class="drawer-scrim" data-close-replace></div>
+        <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="replaceTitle">
+          <button class="close-button" type="button" data-close-replace>关闭</button>
+          <div id="replaceBody"></div>
+        </section>
+      </div>
+
+      <div id="settingsDrawer" class="drawer" aria-hidden="true">
+        <div class="drawer-scrim" data-close-settings></div>
+        <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+          <button class="close-button" type="button" data-close-settings>关闭</button>
+          <div id="settingsBody"></div>
+        </section>
+      </div>
+
+      <div id="pantryDrawer" class="drawer" aria-hidden="true">
+        <div class="drawer-scrim" data-close-pantry></div>
+        <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="pantryTitle">
+          <button class="close-button" type="button" data-close-pantry>关闭</button>
+          <div id="pantryBody"></div>
+        </section>
+      </div>
+
+      <div id="reimburseDrawer" class="drawer" aria-hidden="true">
+        <div class="drawer-scrim" data-close-reimburse></div>
+        <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="reimburseTitle">
+          <button class="close-button" type="button" data-close-reimburse>关闭</button>
+          <div id="reimburseBody"></div>
+        </section>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script src="./app.js?v=20260703-4"></script>
+  </body>
+</html>
