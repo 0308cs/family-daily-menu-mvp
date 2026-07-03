@@ -1,4 +1,4 @@
-const APP_VERSION = "20260703-4";
+const APP_VERSION = "20260704-1";
 const DATA_URL = `../data/recipes.seed.json?v=${APP_VERSION}`;
 
 const STORAGE_KEYS = {
@@ -22,6 +22,7 @@ const DEFAULT_MEMBERS = [
 ];
 
 const GLOBAL_HARD_AVOID = [];
+const GREEN_VEGETABLE_RE = /菜心|菜芯|油菜心|油菜|小白菜|上海青|芥兰|芥蓝|西兰花|西蓝花|西兰|菠菜|生菜|芥菜|苋菜|茼蒿|豆苗|豌豆苗|西洋菜|白菜心/;
 
 const MEALS = [
   { id: "lunch", label: "午餐" },
@@ -301,7 +302,7 @@ function generatePlan(forceNew) {
       return null;
     }
     const rules = mealRules(memberIds);
-    const dishes = chooseDishesForMeal(meal.id, factor, memberIds, rules, recentIds, usedRecipeIds, usedProtein);
+  const dishes = chooseDishesForMeal(meal.id, factor, memberIds, rules, recentIds, usedRecipeIds, usedProtein);
     dishes.forEach((dish) => {
       usedRecipeIds.add(dish.recipe.id);
       usedProtein.add(dish.recipe.protein_group);
@@ -351,6 +352,7 @@ function chooseDishesForMeal(mealId, factor, memberIds, rules, recentIds, usedRe
     }
   });
 
+  ensureGreenVegetableForMeal(mealId, factor, memberIds, rules, recentIds, usedRecipeIds, usedProtein, dishes);
   return dishes;
 }
 
@@ -370,7 +372,14 @@ function pickRecipe(slot, mealId, index, memberIds, rules, recentIds, usedRecipe
     return recipe.dish_type === "main";
   });
 
-  const relaxedCandidates = slotCandidates.length ? slotCandidates : baseCandidates;
+  const greenSlotCandidates = slot === "vegetable" && !mealHasGreenVegetable(currentDishes)
+    ? slotCandidates.filter(isGreenVegetableRecipe)
+    : [];
+  const relaxedCandidates = greenSlotCandidates.length
+    ? greenSlotCandidates
+    : slotCandidates.length
+      ? slotCandidates
+      : baseCandidates;
   const salt = `${tomorrowIsoDate()}-${mealId}-${slot}-${index}-${state.generationCount}`;
   const currentIngredientKeys = new Set(currentDishes.map((dish) => recipeMainIngredientKey(dish.recipe)).filter(Boolean));
   const currentProteins = new Set(currentDishes.map((dish) => dish.recipe.protein_group).filter(Boolean));
@@ -392,12 +401,74 @@ function pickRecipe(slot, mealId, index, memberIds, rules, recentIds, usedRecipe
 }
 
 function reasonForRecipe(recipe, slot) {
+  if (isGreenVegetableRecipe(recipe)) return "绿色蔬菜担当，补青菜";
   if (slot === "vegetable") return "补蔬菜，采购容易";
   if (slot === "soup") return "汤羹补水分，做法稳";
   if (recipe.protein_group === "fish" || recipe.protein_group === "seafood") return "水产蛋白，适合午晚餐轮换";
   if (recipe.protein_group === "tofu") return "豆制品补位，口味清淡";
   if (recipe.method.includes("蒸")) return "蒸菜少油，保姆容易执行";
   return "家常食材，适合明天安排";
+}
+
+function ensureGreenVegetableForMeal(mealId, factor, memberIds, rules, recentIds, usedRecipeIds, usedProtein, dishes) {
+  if (!dishes.length || mealHasGreenVegetable(dishes)) return;
+  const greenRecipe = pickGreenVegetableRecipe(mealId, memberIds, rules, recentIds, usedRecipeIds, dishes);
+  if (!greenRecipe) {
+    rules.alerts.push("这餐绿色蔬菜不足，请采购时加一道菜心或西兰花");
+    return;
+  }
+  const replaceIndex = greenVegetableReplaceIndex(dishes);
+  const replaced = dishes[replaceIndex]?.recipe;
+  dishes[replaceIndex] = {
+    recipe: greenRecipe,
+    servings: Math.max(2, Math.round(factor)),
+    reason: "每餐固定补一道绿色蔬菜",
+  };
+  usedRecipeIds.add(greenRecipe.id);
+  if (greenRecipe.protein_group) usedProtein.add(greenRecipe.protein_group);
+  if (replaced?.id && !dishes.some((dish) => dish.recipe.id === replaced.id)) {
+    usedRecipeIds.delete(replaced.id);
+  }
+}
+
+function pickGreenVegetableRecipe(mealId, memberIds, rules, recentIds, usedRecipeIds, currentDishes) {
+  const currentIds = new Set(currentDishes.map((dish) => String(dish.recipe.id)));
+  const salt = `${tomorrowIsoDate()}-${mealId}-green-${state.generationCount}`;
+  return state.recipes
+    .filter((recipe) => isGreenVegetableRecipe(recipe))
+    .filter((recipe) => !usedRecipeIds.has(recipe.id))
+    .filter((recipe) => !currentIds.has(String(recipe.id)))
+    .filter((recipe) => !violatesHardAvoid(recipe, rules.hardAvoid))
+    .filter((recipe) => !(recipe.tags?.warnings?.length > 1))
+    .map((recipe) => {
+      let score = recipe.selection_score || 0;
+      if (recipe.dish_type === "vegetable") score += 80;
+      if (recipe.dish_type === "tofu") score += 20;
+      if (recipe.dish_type === "soup") score -= 12;
+      if (recipe.dish_type === "main") score -= 18;
+      if (recentIds.has(String(recipe.id))) score -= 45;
+      score += memberFitScore(recipe, memberIds, rules);
+      score += seededNumber(`${salt}-${recipe.id}`) * 8;
+      return { recipe, score };
+    })
+    .sort((a, b) => b.score - a.score)[0]?.recipe;
+}
+
+function greenVegetableReplaceIndex(dishes) {
+  const vegetableIndex = dishes.findIndex((dish) => dish.recipe.dish_type === "vegetable" && !isGreenVegetableRecipe(dish.recipe));
+  if (vegetableIndex >= 0) return vegetableIndex;
+  const supportIndex = dishes.findIndex((dish) => !["main", "soup"].includes(dish.recipe.dish_type) && !isGreenVegetableRecipe(dish.recipe));
+  if (supportIndex >= 0) return supportIndex;
+  const nonGreenIndex = dishes.findIndex((dish) => !isGreenVegetableRecipe(dish.recipe));
+  return Math.max(0, nonGreenIndex);
+}
+
+function mealHasGreenVegetable(dishes) {
+  return dishes.some((dish) => isGreenVegetableRecipe(dish.recipe));
+}
+
+function isGreenVegetableRecipe(recipe) {
+  return GREEN_VEGETABLE_RE.test(recipeSearchText(recipe));
 }
 
 function recipeMainIngredientKey(recipe) {
@@ -502,17 +573,14 @@ function recipeSearchText(recipe) {
 
 function buildNutritionSummary(meals) {
   const dishes = meals.flatMap((meal) => meal.dishes.map((dish) => dish.recipe));
-  const hasVegEveryMeal = meals.every((meal) => meal.dishes.some((dish) => {
-    const groups = dish.recipe.tags?.food_groups || [];
-    return dish.recipe.dish_type === "vegetable" || groups.some((group) => group.includes("蔬菜"));
-  }));
+  const hasGreenVegetableEveryMeal = meals.every((meal) => mealHasGreenVegetable(meal.dishes));
   const proteins = new Set(dishes.map((recipe) => recipe.protein_group).filter(Boolean));
   const methods = new Set(dishes.map((recipe) => recipe.method).filter(Boolean));
   const lowRisk = dishes.every((recipe) => !(recipe.tags?.warnings || []).includes("炸"));
   return {
-    score: Math.min(98, 70 + (hasVegEveryMeal ? 10 : 0) + Math.min(proteins.size * 4, 12) + Math.min(methods.size * 2, 6)),
+    score: Math.min(98, 70 + (hasGreenVegetableEveryMeal ? 10 : 0) + Math.min(proteins.size * 4, 12) + Math.min(methods.size * 2, 6)),
     lines: [
-      hasVegEveryMeal ? "每餐已有蔬菜" : "有餐次蔬菜偏少",
+      hasGreenVegetableEveryMeal ? "每餐已有绿色蔬菜" : "有餐次缺绿色蔬菜",
       `蛋白来源 ${proteins.size || 0} 类`,
       `烹饪方式 ${methods.size || 0} 种`,
       lowRisk ? "默认少炸少辣" : "含偏重口味菜",
@@ -1347,7 +1415,8 @@ function saveRecipeCorrection(recipeId) {
   const stepsText = document.getElementById("edit-steps").value.trim();
   state.corrections[recipeId] = { name, base_servings: servings, ingredientsText, stepsText };
   saveJson(STORAGE_KEYS.corrections, state.corrections);
-  state.recipes = applyCorrections(state.payload.recipes || []);
+  state.recipes = applyCorrections(state.payload.recipes || [])
+    .filter((recipe) => !violatesHardAvoid(recipe, GLOBAL_HARD_AVOID));
   if (state.plan) {
     state.plan = hydratePlan(serializablePlan(state.plan));
     saveJson(STORAGE_KEYS.plan, serializablePlan(state.plan));
