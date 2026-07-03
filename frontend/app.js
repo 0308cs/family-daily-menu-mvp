@@ -21,7 +21,7 @@ const DEFAULT_MEMBERS = [
   { id: "helper", name: "帮厨", factor: 1, ageGroup: "adult", hardAvoid: [] },
 ];
 
-const GLOBAL_HARD_AVOID = ["鸭肉"];
+const GLOBAL_HARD_AVOID = [];
 
 const MEALS = [
   { id: "lunch", label: "午餐" },
@@ -430,7 +430,7 @@ function mealRules(memberIds) {
   const alerts = [];
 
   if (hardAvoid.includes("鸭肉")) {
-    alerts.push("全家不爱吃鸭肉，已避开");
+    alerts.push("已避开成员忌口食材");
   }
   if (hardAvoid.includes("油麦菜")) {
     alerts.push("已避开成员忌口食材");
