@@ -1,4 +1,4 @@
-const APP_VERSION = "20260704-1";
+const APP_VERSION = "20260704-2";
 const DATA_URL = `../data/recipes.seed.json?v=${APP_VERSION}`;
 
 const STORAGE_KEYS = {
@@ -15,9 +15,13 @@ const STORAGE_KEYS = {
 const DEFAULT_MEMBERS = [
   { id: "member1", name: "成员1", factor: 1, ageGroup: "adult", hardAvoid: [] },
   { id: "member2", name: "成员2", factor: 1, ageGroup: "adult", hardAvoid: [] },
-  { id: "member3", name: "成员3", factor: 0.5, ageGroup: "adult_like", hardAvoid: [] },
-  { id: "member4", name: "成员4", factor: 1, ageGroup: "adult_like", hardAvoid: [] },
-  { id: "member5", name: "成员5", factor: 0.5, ageGroup: "young_child", hardAvoid: [] },
+  { id: "member3", name: "成员3", factor: 1, ageGroup: "adult", hardAvoid: [] },
+  { id: "member4", name: "成员4", factor: 1, ageGroup: "adult", hardAvoid: [] },
+  { id: "member5", name: "成员5", factor: 1, ageGroup: "adult", hardAvoid: [] },
+  { id: "member6", name: "成员6", factor: 1, ageGroup: "adult", hardAvoid: [] },
+  { id: "member7", name: "成员7", factor: 1, ageGroup: "adult", hardAvoid: [] },
+  { id: "member8", name: "成员8", factor: 1, ageGroup: "adult", hardAvoid: [] },
+  { id: "member9", name: "成员9", factor: 1, ageGroup: "adult", hardAvoid: [] },
   { id: "helper", name: "帮厨", factor: 1, ageGroup: "adult", hardAvoid: [] },
 ];
 
